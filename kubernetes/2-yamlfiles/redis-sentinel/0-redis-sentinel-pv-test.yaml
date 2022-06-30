@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-redis-sentinel-0
+spec:
+  capacity:
+    storage: 4Gi
+  accessModes:
+    - ReadWriteMany
+  volumeMode: Filesystem
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: "redis-sentinel-storage-class"
+  nfs:
+    # real share directory
+    path: /opt/app/nfs/redis/0
+    # nfs real ip
+    server: 192.168.110.33
