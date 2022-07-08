@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuboard-2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuboard-2
+  namespace: kuboard-2
+  annotations:
+    k8s.kuboard.cn/displayName: kuboard
+    k8s.kuboard.cn/ingress: "true"
+    k8s.kuboard.cn/service: NodePort
+    k8s.kuboard.cn/workload: kuboard
+  labels:
+    k8s.kuboard.cn/layer: monitor
+    k8s.kuboard.cn/name: kuboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s.kuboard.cn/layer: monitor
+      k8s.kuboard.cn/name: kuboard
+  template:
+    metadata:
+      labels:
+        k8s.kuboard.cn/layer: monitor
+        k8s.kuboard.cn/name: kuboard
+    spec:
+      containers:
+      - name: kuboard-2
+        image: 10.1.21.215:5000/eipwork/kuboard:v3.5.0.3
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: kuboard-data
+          mountPath: /data
+      volumes:
+      - name: kuboard-data
+        nfs:
+          server: 10.1.21.197
+          path: /home/nfs/kuboard-data
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+        operator: Exists
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuboard-2
+  namespace: kuboard-2
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 30080
+  selector:
+    k8s.kuboard.cn/layer: monitor
+    k8s.kuboard.cn/name: kuboard
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kuboard-2-user
+  namespace: kuboard-2
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kuboard-2-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-2-admin
+subjects:
+- kind: ServiceAccount
+  name: kuboard-2-user
+  namespace: kuboard-2
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kuboard-2-viewer
+  namespace: kuboard-2
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kuboard-2-viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: view
+subjects:
+- kind: ServiceAccount
+  name: kuboard-2-viewer
+  namespace: kuboard-2
+
+# ---
+# apiVersion: extensions/v1beta1
+# kind: Ingress
+# metadata:
+#   name: kuboard
+#   namespace: kube-system
+#   annotations:
+#     k8s.kuboard.cn/displayName: kuboard
+#     k8s.kuboard.cn/workload: kuboard
+#     nginx.org/websocket-services: "kuboard"
+#     nginx.com/sticky-cookie-services: "serviceName=kuboard srv_id expires=1h path=/"
+# spec:
+#   rules:
+#   - host: kuboard.yourdomain.com
+#     http:
+#       paths:
+#       - path: /
+#         backend:
+#           serviceName: kuboard
+#           servicePort: http

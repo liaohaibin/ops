@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuboard-etcd
+  namespace: kuboard
+spec:
+  type: ClusterIP
+  ports:
+  - port: 2379
+    name: client
+  - port: 2380
+    name: peer
+  selector:
+    app: kuboard-etcd
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: '9'
+    k8s.kuboard.cn/ingress: 'false'
+    k8s.kuboard.cn/service: NodePort
+    k8s.kuboard.cn/workload: kuboard-v3
+  labels:
+    k8s.kuboard.cn/name: kuboard-v3
+  name: kuboard-v3
+  namespace: kuboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s.kuboard.cn/name: kuboard-v3
+  template:
+    metadata:
+      labels:
+        k8s.kuboard.cn/name: kuboard-v3
+    spec:
+      containers:
+      - env:
+        - name: KUBOARD_ETC_ENDPOINTS
+          value: >-
+            kuboard-etcd-0.kuboard-etcd:2379,kuboard-etcd-1.kuboard-etcd:2379,kuboard-etcd-2.kuboard-etcd:2379
+        envFrom:
+        - configMapRef:
+            name: kuboard-v3-config
+        # image: 'swr.cn-east-2.myhuaweicloud.com/kuboard/kuboard:v3'
+        image: 192.168.110.44:5000/eipwork/kuboard:v3.5.0.2
+        imagePullPolicy: Always
+        name: kuboard
+        volumeMounts:
+        - name: kuboard-data
+          mountPath: /data
+      volumes:
+      - name: kuboard-data
+        nfs:
+          server: 192.168.110.33
+          path: /opt/app/nfs/kuboard-data  
+          
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    k8s.kuboard.cn/workload: kuboard-v3
+  labels:
+    k8s.kuboard.cn/name: kuboard-v3
+  name: kuboard-v3
+  namespace: kuboard
+spec:
+  ports:
+  - name: webui
+    nodePort: 30080
+    port: 80
+    protocol: TCP
+    targetPort: 80
+  - name: agentservertcp
+    nodePort: 30081
+    port: 10081
+    protocol: TCP
+    targetPort: 10081
+  - name: agentserverudp
+    nodePort: 30081
+    port: 10081
+    protocol: UDP
+    targetPort: 10081
+  selector:
+    k8s.kuboard.cn/name: kuboard-v3
+  sessionAffinity: None
+  type: NodePort

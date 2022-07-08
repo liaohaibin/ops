@@ -1,0 +1,9 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: kuboard-sc
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"  # --- 设置为默认的storageclass
+  namespace: kuboard
+provisioner: fuseim.pri/ifs
+reclaimPolicy: Retain

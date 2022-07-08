@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuboard
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kuboard-v3-config
+  namespace: kuboard
+data:
+  # 关于如下参数的解释，请参考文档 https://kuboard.cn/install/v3/install-built-in.html
+  # [common]
+  KUBOARD_ENDPOINT: 'http://192.168.110.30:30080'
+  KUBOARD_AGENT_SERVER_UDP_PORT: '30081'
+  KUBOARD_AGENT_SERVER_TCP_PORT: '30081'
+  KUBOARD_SERVER_LOGRUS_LEVEL: info # error / debug / trace
+  # KUBOARD_AGENT_KEY 是Agent与kuboard通信时的密钥，请修改为一个任意的包含字母、数字的32位字符串、此密钥变更后，需要删除Kuboard Agent重新导入。
+  KUBOARD_AGENT_KEY: abcdefghijklmnopqrstuvwxyz12345678
