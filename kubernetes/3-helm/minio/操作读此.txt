@@ -1,0 +1,7 @@
+# 此启动需要先在kuboard控制台创建存储类，然后指定这个创建的存储类。
+
+# 初始安装
+helm install minio --namespace middleware --set image.repository=minio/minio --set image.tag=RELEASE.2021-02-14T04-01-33Z --set image.pullPolicy=IfNotPresent --set persistence.enabled=true --set accessKey=minio --set secretKey=minio123 --set persistence.size=10Gi --set resources.requests.memory=512Mi --set persistence.storageClass=big-oss-minio-class-new --set mode=distributed,replicas=4 -f ./values.yaml  minio/minio
+
+# 更新启动
+helm upgrade minio --namespace middleware --set image.repository=minio/minio --set image.tag=RELEASE.2021-02-14T04-01-33Z --set image.pullPolicy=IfNotPresent --set persistence.enabled=true --set accessKey=minio --set secretKey=minio123 --set persistence.size=10Gi --set resources.requests.memory=512Mi --set persistence.storageClass=big-oss-minio-class-new --set mode=distributed,replicas=4 -f ./values.yaml  minio/minio
