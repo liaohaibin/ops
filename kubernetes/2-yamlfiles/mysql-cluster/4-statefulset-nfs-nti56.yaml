@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: middleware
+  labels:
+    name: middleware
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: mycnf
+  namespace: middleware
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+data:
+    mycnf.cnf: |
+      [mysqld]
+      max_connections=1500
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-srv-secret
+  namespace: middleware
+  labels:
+    app: mysql-srv
+type: Opaque
+data:
+  password: TnRpNTZAY29t 
+  repl-user: bnRp # echo -n 'nti' | base64
+  repl-pass: TnRpMTIzNDU2eG15Yw== # echo -n 'Nti123456xmyc' | base64
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-srv
+  namespace: middleware
+  labels:
+    app: mysql-srv
+spec:
+  ports:
+  - name: mysql-srv
+    port: 3306
+    targetPort: 3306
+    nodePort: 33060
+  selector:
+    statefulset.kubernetes.io/pod-name: mysql-srv-0
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-srv-read
+  namespace: middleware
+  labels:
+    app: mysql-srv
+spec:
+  ports:
+  - name: mysql-srv
+    port: 3306
+    targetPort: 3306
+    nodePort: 33070
+  type: NodePort
+  selector:
+    statefulset.kubernetes.io/pod-name: mysql-srv-1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-srv
+  namespace: middleware
+spec:
+  selector:
+    matchLabels:
+      app: mysql-srv
+  serviceName: mysql-srv
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: mysql-srv
+    spec:
+      containers:
+      - name: mysql-srv
+        # image: nti_mysql_server:8.0.29
+        image: 10.1.21.215:5000/middleware/mysql-server:8.0.29
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-srv-secret
+              key: password
+        - name: MYSQL_REPL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-srv-secret
+              key: repl-user
+        - name: MYSQL_REPL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: mysql-srv-secret
+              key: repl-pass
+        - name: SERVICE_NAME
+          value: "mysql-srv"
+        - name: STS_NAME
+          value: "mysql-srv"
+        - name: STS_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MYSQL_MASTER_HOST
+          value: "$(STS_NAME)-0.$(SERVICE_NAME).$(STS_NAMESPACE)"
+        ports:
+        - name: mysql-srv
+          containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        - name: mycnf
+          mountPath: /etc/my.cnf.d/mycnf.cnf
+          subPath: mycnf.cnf
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 6Gi
+          limits:
+            cpu: 2000m
+            memory: 6Gi
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysqladmin ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysql -h 127.0.0.1 -u root -e "SELECT 1"
+          initialDelaySeconds: 60
+          periodSeconds: 5
+          timeoutSeconds: 2
+      volumes:
+      - name: mycnf
+        configMap:
+          name: mycnf
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: nfs-mysql
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi

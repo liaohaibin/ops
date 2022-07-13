@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+  namespace: mysql-cluster
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        # image: nti_mysql_server:8.0.29
+        image: 192.168.110.44:5000/middleware/nti_mysql_server:8.0.29
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
+        - name: MYSQL_REPL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: repl-user
+        - name: MYSQL_REPL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: repl-pass
+        - name: SERVICE_NAME
+          value: "mysql"
+        - name: STS_NAME
+          value: "mysql"
+        - name: STS_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MYSQL_MASTER_HOST
+          value: "$(STS_NAME)-0.$(SERVICE_NAME).$(STS_NAMESPACE)"
+        ports:
+        - name: mysql
+          containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+          subPath: mysql
+        - name: conf
+          mountPath: /etc/my.cnf.d
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 6Gi
+          limits:
+            cpu: 2000m
+            memory: 6Gi
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysqladmin ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysql -h 127.0.0.1 -u root -e "SELECT 1"
+          initialDelaySeconds: 60
+          periodSeconds: 5
+          timeoutSeconds: 2
+      volumes:
+      - name: conf
+        hostPath:
+            path: /home/data
+      - name: data
+        hostPath:
+            path: /home/data
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - k8s-nfs02
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: NotIn
+                  values:
+                  - abc
+              topologyKey: kubernetes.io/hostname

@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql2
+  namespace: mysql-cluster2
+spec:
+  selector:
+    matchLabels:
+      app: mysql2
+  serviceName: mysql2
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: mysql2
+    spec:
+      containers:
+      - name: mysql2
+        # image: nti_mysql_server:8.0.29
+        image: 192.168.110.44:5000/middleware/nti_mysql_server:8.0.29
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret2
+              key: password
+        - name: MYSQL_REPL_USER
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret2
+              key: repl-user
+        - name: MYSQL_REPL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret2
+              key: repl-pass
+        - name: SERVICE_NAME
+          value: "mysql"
+        - name: STS_NAME
+          value: "mysql"
+        - name: STS_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MYSQL_MASTER_HOST
+          value: "$(STS_NAME)-0.$(SERVICE_NAME).$(STS_NAMESPACE)"
+        ports:
+        - name: mysql2
+          containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        - name: mycnf
+          mountPath: /etc/my.cnf.d/mycnf.cnf
+          subPath: mycnf.cnf
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 6Gi
+          limits:
+            cpu: 2000m
+            memory: 6Gi
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysqladmin ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - "-c"
+            - MYSQL_PWD="${MYSQL_ROOT_PASSWORD}"
+            - mysql -h 127.0.0.1 -u root -e "SELECT 1"
+          initialDelaySeconds: 60
+          periodSeconds: 5
+          timeoutSeconds: 2
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
+      volumes:
+      - name: mycnf
+        configMap:
+          name: mycnf
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: nfs-storage
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
