@@ -2,7 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mypvc1
-  namespace: mysql-cluster2
+  namespace: middleware
 spec:
   accessModes:
   - ReadWriteMany

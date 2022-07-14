@@ -1,0 +1,58 @@
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  labels:
+    app: prometheus
+  name: prometheus
+  namespace: ns-monitor
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: prometheus
+  serviceName: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+      - name: prometheus
+        image: 192.168.110.44:5000/prom/prometheus:latest
+        volumeMounts:
+        - mountPath: /prometheus
+          name: data
+        - mountPath: /etc/prometheus/prometheus.yml
+          name: prometheus-conf-volume
+          subPath: prometheus.yml
+        - mountPath: /etc/prometheus/rules
+          name: prometheus-rules-volume
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+      volumes:
+      - name: prometheus-conf-volume
+        configMap:
+          name: prometheus-conf
+      - name: prometheus-rules-volume
+        configMap:
+          name: prometheus-rules
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: nfs-storage
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi

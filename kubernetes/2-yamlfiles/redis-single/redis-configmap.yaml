@@ -12,5 +12,5 @@ data:
     bind 0.0.0.0
     appendonly yes
     protected-mode no
-    requirepass redis123
+    # requirepass redis123
     pidfile /data/redis-6379.pid

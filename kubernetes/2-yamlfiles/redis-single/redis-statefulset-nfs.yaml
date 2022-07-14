@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations: {}
+  name: redis-single
+  namespace: middleware
+  labels:
+    app: redis-single
+    k8s.kuboard.cn/layer: cloud
+spec:
+  serviceName: redis-single
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-single
+  template:
+    metadata:
+      labels:
+        app: redis-single
+    spec:
+      initContainers:
+      - name: system-init
+        image: 192.168.110.44:5000/middleware/busybox:latest
+        imagePullPolicy: IfNotPresent
+        command:
+          - "sh"
+          - "-c"
+          - "echo 2048 > /proc/sys/net/core/somaxconn && echo never > /sys/kernel/mm/transparent_hugepage/enabled"
+        securityContext:
+          privileged: true
+          runAsUser: 0
+        volumeMounts:
+        - name: sys
+          mountPath: /sys
+
+      containers:
+      - name: redis-single
+        image: 192.168.110.44:5000/middleware/redis:7.0.0
+        command:
+          - "sh"
+          - "-c"
+          - "redis-server /usr/local/etc/redis/redis.conf"
+        ports:
+        - containerPort: 6379
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1024Mi
+          requests:
+            cpu: 1000m
+            memory: 1024Mi
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 300
+          timeoutSeconds: 1
+          periodSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: config
+          mountPath: /usr/local/etc/redis/redis.conf
+          subPath: redis.conf
+     
+      volumes:
+      - name: config
+        configMap:
+          name: redis-single-config
+      - name: sys
+        hostPath:
+          path: /sys
+          
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      storageClassName: backup-data
+      accessModes:
+      - ReadWriteMany
+      resources:
+        requests:
+          storage: 100Gi
+        

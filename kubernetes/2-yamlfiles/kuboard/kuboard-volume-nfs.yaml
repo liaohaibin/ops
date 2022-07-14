@@ -26,7 +26,8 @@ spec:
       containers:
       - name: kuboard
         # image: 10.1.21.215:5000/eipwork/kuboard:v3.5.0.3
-        image: 192.168.110.44:5000/eipwork/kuboard:v3.5.0.2
+        # image: 192.168.110.44:5000/eipwork/kuboard:v3.5.0.2
+        image: 10.190.39.144:5000/middleware/kuboard:v3.5.0.3
         imagePullPolicy: IfNotPresent
         volumeMounts:
         - name: kuboard-data
@@ -34,7 +35,7 @@ spec:
       volumes:
       - name: kuboard-data
         nfs:
-          server: 192.168.110.33
+          server: 10.190.39.143
           path: /opt/app/nfs/kuboard-data
       tolerations:
       - key: node-role.kubernetes.io/master
