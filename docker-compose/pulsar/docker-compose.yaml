@@ -1,0 +1,50 @@
+version: '2'
+
+services:
+  standalone:
+    image: apachepulsar/pulsar:latest
+    expose:
+      - 8080
+      - 6650
+    restart: always
+    environment:
+      - BOOKIE_MEM=" -Xms512m -Xmx512 -XX:MaxDirectMemorySize=1g"
+    volumes:
+      - /home/clickhouse/pulsar/data:/pulsar/data:rw
+      - /home/clickhouse/pulsar/conf:/pulsar/conf:rw
+    ports:
+      - 8080:8080
+      - 6650:6650
+    
+    command: >
+      /bin/bash -c
+      "/pulsar/bin/apply-config-from-env.py /pulsar/conf/standalone.conf  && exec /pulsar/bin/pulsar standalone --advertised-address standalone"
+    
+  dashboard:
+    image: apachepulsar/pulsar-dashboard:latest
+    depends_on:
+      - standalone
+    ports:
+      - "81:80"
+
+    environment:
+      - SERVICE_URL=http://standalone:8080
+
+  pulsar-manager:
+    image:  "apachepulsar/pulsar-manager:v0.2.0"
+    restart: always
+    ports:
+      - "9527:9527"
+      - "7750:7750"
+    depends_on:
+      - standalone
+    links:
+      - standalone
+    environment:
+      - SPRING_CONFIGURATION_FILE=/pulsar-manager/pulsar-manager/application.properties
+    
+volumes:
+  pulsardata:
+    driver: local
+  pulsarconf:
+    driver: local

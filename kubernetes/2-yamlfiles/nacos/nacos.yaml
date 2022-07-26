@@ -44,7 +44,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nacos-cm
-  namespace: nacos
+  namespace: middleware
 data:
   mysql.db.name: "nacos"
   mysql.port: "3306"
@@ -55,7 +55,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: nacos
-  namespace: nacos
+  namespace: middleware
 spec:
   serviceName: nacos-headless
   replicas: 1

@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: k8s-cluster # 添加公共标签，在被其他prometheus采集时标识数据来源
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - alertmanager.monitoring.svc:9093 # 在monitoring命名空间下创建alertmanager后访问地址
+
+rule_files:
+  - etc/prometheus-rules/*_rules.yaml # rules配置文件挂载位置
+  - etc/prometheus-rules/*_alerts.yaml
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+    - targets: ['localhost:9090']
+
+#remote_write:
+  #- url: "http://localhost:8086/api/v1/prom/write?db=prometheus&u=username&p=password"

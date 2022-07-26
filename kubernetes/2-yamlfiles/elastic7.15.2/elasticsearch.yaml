@@ -1,0 +1,113 @@
+
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearchex
+  namespace: elastic-system
+spec:
+  version: 7.15.2
+  http:
+    service:
+      spec:
+        type: NodePort
+        ports:
+        - port: 9201
+          targetPort: 9200
+          nodePort: 9201
+
+    tls:
+      selfSignedCertificate:
+        disabled: true
+  image: 192.168.110.44:5000/elastic/elasticsearch:7.15.2
+  nodeSets:
+  - name: master-nodes
+    count: 1
+    config:
+      node.master: true
+      node.voting_only: false
+      node.data: false
+      node.ingest: true
+      node.ml: false
+      node.store.allow_mmap: false
+    podTemplate:
+      spec:
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms2g -Xmx2g
+          resources:
+            limits:
+              memory: 4Gi
+              cpu: 2
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: es-rdb
+  - name: data-nodes
+    count: 1
+    config:
+      node.master: false
+      node.voting_only: false
+      node.data: true
+      node.ingest: false
+      node.ml: false
+      node.store.allow_mmap: false
+    podTemplate:
+      spec:
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms16g -Xmx16g
+          resources:
+            limits:
+              memory: 32Gi
+              cpu: 8
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 100Gi
+        storageClassName: es-rdb
+  - name: client-nodes # 协调节点设置
+    count: 1
+    config:
+      node.master: false
+      node.voting_only: false
+      node.data: false
+      node.ingest: false
+      node.ml: false
+      node.store.allow_mmap: false
+    podTemplate:
+      spec:
+        containers:
+        - name: elasticsearch
+          env:
+          - name: ES_JAVA_OPTS
+            value: -Xms8g -Xmx8g
+          resources:
+            limits:
+              memory: 16Gi
+              cpu: 2
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: es-rdb

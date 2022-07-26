@@ -1,0 +1,5 @@
+groups:
+- name: example
+  rules:
+  - record: up:count
+    expr: sum(up) by (job)

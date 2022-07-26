@@ -1,0 +1,65 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibanaex
+  namespace: elastic-system
+spec:
+  version: 7.15.2
+  image: 192.168.110.44:5000/elastic/kibana:7.15.2
+  count: 1
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+    service:
+      spec:
+        type: NodePort
+        # ports:
+        #   - port: 5601
+        #     targetPort: 5601
+        #     name: http
+        #     nodePort: 5602
+  podTemplate:
+    spec:
+      containers:
+      - name: kibana
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+          requests:
+            memory: 512Mi
+            cpu: 100m
+  elasticsearchRef:
+    name: elasticsearchex
+  # config:
+  #   elasticsearch.requestHeadersWhitelist:
+  #   - authorization
+
+  # config:
+  #   elasticsearch.hosts:
+  #     - https://elasticsearchex-es-master.elastic-system:9200
+  #   elasticsearch.username: kibana
+  # secureSettings:
+  #   - secretName: kibanaex-elasticsearchex-credentials
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: kibana-nodeport
+#   namespace: elastic-system
+# spec:
+#   externalTrafficPolicy: Cluster
+#   ports:
+#   - name: http
+#     nodePort: 5601
+#     port: 5601
+#     protocol: TCP
+#     targetPort: 5601
+#   selector:
+#     common.k8s.elastic.co/type: kibana
+#     kibana.k8s.elastic.co/name: kibana-sample
+#   sessionAffinity: None
+#   type: NodePort
+# status:
+#   loadBalancer: {}

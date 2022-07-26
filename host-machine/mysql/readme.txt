@@ -1,0 +1,1 @@
+change master to master_host='mysql-srv-0.mysql-srv.middleware',master_port=3306,master_user='root',master_password='Nti56@com',master_log_file='binlog.000001',master_log_pos=1075;

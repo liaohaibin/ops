@@ -1,4 +1,4 @@
-# my global config
+    # my global config
     global:
       scrape_interval:  15s     # Set the scrape interval to every 15 seconds. Defauls is every 1 minute.
       evaluation_interval: 15s  # Evaluate rules every 15 seconds. The default is every 1 minute.
@@ -223,33 +223,33 @@
       # via the following annotations:
       # 
       # * `prometheus.io/probe`: Only probe services that have a value of `true`
-      - job_name: 'kubernetes-ingresses'
+      # - job_name: 'kubernetes-ingresses'
 
-        metrics_path: /probe
-        params:
-          module: [http_2xx]
+      #   metrics_path: /probe
+      #   params:
+      #     module: [http_2xx]
 
-        kubernetes_sd_configs:
-        - role: ingress
+      #   kubernetes_sd_configs:
+      #   - role: ingress
 
-        relabel_configs:
-        - source_labels: [__meta_kubernetes_ingress_annotation_prometheus_io_probe]
-          action: keep
-          regex: true
-        - source_labels: [__meta_kubernetes_ingress_scheme,__address__,__meta_kubernetes_ingress_path]
-          regex: (.+);(.+);(.+)
-          replacement: ${1}://${2}${3}
-          target_label: __param_target
-        - target_label: __address__
-          replacement: balckbox-exporter.example.com:9115
-        - source_labels: [__param_target]
-          target_label: instance
-        - action: labelmap
-          regex: __meta_kubernetes_ingress_label(.+)
-        - source_labels: [__meta_kubernetes_namespace]
-          target_label: kubernetes_namespace
-        - source_labels: [__meta_kubernetes_ingress_name]
-          target_label: kubernetes_name
+      #   relabel_configs:
+      #   - source_labels: [__meta_kubernetes_ingress_annotation_prometheus_io_probe]
+      #     action: keep
+      #     regex: true
+      #   - source_labels: [__meta_kubernetes_ingress_scheme,__address__,__meta_kubernetes_ingress_path]
+      #     regex: (.+);(.+);(.+)
+      #     replacement: ${1}://${2}${3}
+      #     target_label: __param_target
+      #   - target_label: __address__
+      #     replacement: balckbox-exporter.example.com:9115
+      #   - source_labels: [__param_target]
+      #     target_label: instance
+      #   - action: labelmap
+      #     regex: __meta_kubernetes_ingress_label(.+)
+      #   - source_labels: [__meta_kubernetes_namespace]
+      #     target_label: kubernetes_namespace
+      #   - source_labels: [__meta_kubernetes_ingress_name]
+      #     target_label: kubernetes_name
 
       # Example scrape config for pods
       #
@@ -286,3 +286,24 @@
         - source_labels: [__meta_kubernetes_pod_name]
           action: replace
           target_label: kubernetes_pod_name
+
+
+      - job_name: 'kubernetes-node-exporter'
+
+        kubernetes_sd_configs:
+        - role: node
+
+        relabel_configs:
+        - source_labels: [__address__]
+          regex: '(.*):10250'
+          replacement: '${1}:9100'
+          target_label: __address__
+          action: replace
+        - source_labels: [__meta_kubernetes_node_name]
+          action: replace
+          target_label: node
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+        - source_labels: [__meta_kubernetes_node_address_InternalIP]
+          action: replace
+          target_label: ip

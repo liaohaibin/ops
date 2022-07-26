@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus
+      containers:
+      - image: 192.168.110.44:5000/prom/prometheus:latest
+        name: prometheus
+        command:
+        - "/bin/prometheus"
+        args:
+        - "--config.file=/etc/prometheus/prometheus.yml"
+        - "--storage.tsdb.path=/prometheus" # 使用自身Pod进行存储
+        - "--storage.tsdb.retention=30d" # 数据保留30天
+        - "--web.enable-admin-api"  # 控制对admin HTTP API的访问，其中包括删除时间序列等功能
+        - "--web.enable-lifecycle"  # 支持热更新，直接执行localhost:9090/-/reload立即生效
+        ports:
+        - containerPort: 9090
+          protocol: TCP
+          name: http
+        volumeMounts:
+        - mountPath: "/etc/prometheus"
+          name: config-volume
+        - mountPath: "/etc/prometheus-rules"
+          name: rule-volume
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 4000m
+            memory: 10Gi
+      securityContext:
+        runAsUser: 0
+      volumes:
+      - configMap:
+          name: prometheus-config
+        name: config-volume
+      - name: rule-volume
+        configMap:
+          name: prometheus-rules

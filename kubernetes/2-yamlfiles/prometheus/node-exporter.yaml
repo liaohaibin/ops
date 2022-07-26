@@ -15,17 +15,60 @@ spec:
       labels:
         app: node-exporter
     spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
       containers:
       - name: node-exporter
         image: 192.168.110.44:5000/prom/node-exporter:latest
         ports:
         - containerPort: 9100
           protocol: TCP
-      hostNetwork: true
-      hostPID: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        securityContext:
+          privileged: true
+        args:
+        - --path.procfs
+        - /host/proc
+        - --path.sysfs
+        - /host/sys
+        - --path.rootfs
+        - /host/root
+        - --collector.filesystem.ignored-mount-points
+        - '"^/(sys|proc|dev|host|etc)($|/)"'
+        - "--collector.processes"
+        volumeMounts:
+        - name: dev
+          mountPath: /host/dev
+        - name: proc
+          mountPath: /host/proc
+        - name: sys
+          mountPath: /host/sys
+        - name: rootfs
+          mountPath: /host/root
+      
       tolerations:
       - effect: NoSchedule
         operator: Exists
+      volumes:
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: dev
+        hostPath:
+          path: /dev
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: rootfs
+        hostPath:
+          path: /
 ---
 kind: Service
 apiVersion: v1

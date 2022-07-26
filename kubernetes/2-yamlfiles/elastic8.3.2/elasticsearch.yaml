@@ -1,0 +1,36 @@
+
+---
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: eck-cluster
+  namespace: elastic-system
+spec:
+  version: 8.3.2
+  http:
+    service:
+      spec:
+        type: NodePort
+        ports:
+        - name: es-http
+          port: 9200
+          targetPort: 9200
+          nodePort: 9200
+
+    tls:
+      selfSignedCertificate:
+        disabled: true
+  image: 192.168.110.44:5000/elastic/elasticsearch:8.3.2
+  nodeSets:
+  - name: default
+    count: 1
+    volumeClaimTemplates:
+    - metadata:
+        name: elasticsearch-data
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: es-rdb
