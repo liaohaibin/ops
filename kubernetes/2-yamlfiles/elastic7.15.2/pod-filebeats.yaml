@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: filebeats
+  name: filebeats
+  namespace: elastic-system
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: filebeats
+  clusterIP: None
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: elastic-system
+  labels:
+    app: filebeats
+data:
+  filebeat.yml: |-
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /opt/container/nti56/qrcode/business/*.log
+      documents_type: business_dev
+      fields_under_root: true
+      fields:
+        appid: business_dev
+        log_type: info
+      tags: ["business_dev"]
+      exclude_lines: ['^$']
+      multiline:
+        pattern: '^\d{4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2}'
+        negate: true
+        match: after
+    - type: log
+      enabled: true
+      paths:
+        - /opt/container/nti56/qrcode/factory/*.log
+      documents_type: factory_dev
+      fields_under_root: true
+      fields:
+        appid: factory_dev
+        log_type: info
+      tags: ["factory_dev"]
+      exclude_lines: ['^$']
+      multiline:
+        pattern: '^\d{4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2}'
+        negate: true
+        match: after
+      
+
+    setup.kibana:
+      host: "10.1.21.218:5602"
+      username: "elastic"
+      password: "H190l2Hg8ggP3rfP50D3dQT6"
+
+
+    output.logstash:
+      # hosts: ["logstashex.elastic-system.svc.cluster.local:5044"]
+      hosts: ["10.244.180.223:5044"]
+      protocol: "http"
+      indices:
+        - index: "nti56-qrcode-k8s-%{[fileds.appid]}-${+yyyyMM}"
+
+    # output.elasticsearch:
+    #   hosts: ["10.1.21.218:9201"]
+    #   username: "elastic"
+    #   password: "H190l2Hg8ggP3rfP50D3dQT6"
+    #   indices:
+    #     - index: "filebeat-k8s-demo-log-%{+yyyyMMdd}"
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations: {}
+  labels:
+    k8s.kuboard.cn/layer: svc
+  name: filebeats
+  namespace: elastic-system
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: filebeats
+  template:
+    metadata:
+      labels:
+        app: filebeats
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+      - name: filebeats
+        image: 10.1.21.215:5000/elastic/filebeat:7.15.2
+        volumeMounts:
+        - name: logs
+          mountPath: /opt/container/nti56/qrcode
+        - name: config
+          mountPath: /usr/share/filebeat/filebeat.yml
+          subPath: filebeat.yml
+          readOnly: true
+
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      volumes:
+      - name: logs
+        hostPath:
+          path: /opt/container/nti56/qrcode
+      - name: config
+        configMap:
+          name: filebeat-config
+          items:
+          - key: filebeat.yml
+            path: filebeat.yml
+

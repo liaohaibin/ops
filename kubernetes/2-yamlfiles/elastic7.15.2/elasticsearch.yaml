@@ -19,7 +19,7 @@ spec:
     tls:
       selfSignedCertificate:
         disabled: true
-  image: 192.168.110.44:5000/elastic/elasticsearch:7.15.2
+  image: 10.1.21.215:5000/elastic/elasticsearch:7.15.2
   nodeSets:
   - name: master-nodes
     count: 1

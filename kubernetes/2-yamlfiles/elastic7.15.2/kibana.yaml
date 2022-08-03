@@ -5,7 +5,7 @@ metadata:
   namespace: elastic-system
 spec:
   version: 7.15.2
-  image: 192.168.110.44:5000/elastic/kibana:7.15.2
+  image: 10.1.21.215:5000/elastic/kibana:7.15.2
   count: 1
   http:
     tls:
@@ -14,11 +14,11 @@ spec:
     service:
       spec:
         type: NodePort
-        # ports:
-        #   - port: 5601
-        #     targetPort: 5601
-        #     name: http
-        #     nodePort: 5602
+        ports:
+        - port: 5601
+          targetPort: 5601
+          name: http
+          nodePort: 5602
   podTemplate:
     spec:
       containers:

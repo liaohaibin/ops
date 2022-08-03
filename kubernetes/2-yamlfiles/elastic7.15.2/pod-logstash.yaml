@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: logstashex
+  name: logstashex
+  namespace: elastic-system
+spec:
+  clusterIP: None
+  ports:
+  - port: 5044
+  selector:
+    app: logstashex
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  namespace: elastic-system
+  labels:
+    app: logstashex
+data:
+  logstash.yml: |-
+    http.host: "0.0.0.0"
+    xpack.monitoring.enabled: true
+    xpack.monitoring.elasticsearch.username: elastic
+    xpack.monitoring.elasticsearch.password: H190l2Hg8ggP3rfP50D3dQT6
+    xpack.monitoring.elasticsearch.hosts: ["http://10.1.21.218:9201"]
+
+  logstash.conf: |-
+    input {
+      beats {
+        port => 5044
+      }
+    }
+    filter {
+
+    }
+    output {
+      if [log_type] == "info" {
+        elasticsearch {
+          hosts => ["http://10.1.21.218:9201"]
+          index => "info-%{+yyyyMMdd}"
+          user => ["elastic"]
+          password => ["H190l2Hg8ggP3rfP50D3dQT6"]
+        }
+        stdout {
+          codec => rubydebug
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations: {}
+  labels:
+    k8s.kuboard.cn/layer: svc
+  name: logstashex
+  namespace: elastic-system
+spec:
+  serviceName: logstashex
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: logstashex
+  template:
+    metadata:
+      labels:
+        app: logstashex
+    spec:
+      containers:
+      - name: logstashex
+        image: 10.1.21.215:5000/elastic/logstash:7.15.2
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - mountPath: /usr/share/logstash/pipeline/logstash.conf
+          name: logstash-conf
+          subPath: logstash.conf
+        - mountPath: /usr/share/logstash/config/logstash.yml
+          name: logstash-yml
+          subPath: logstash.yml
+      volumes:
+      - name: logstash-conf
+        configMap:
+          name: logstash-config
+          items:
+          - key: logstash.conf
+            path: logstash.conf
+      - name: logstash-yml
+        configMap:
+          name: logstash-config
+          items:
+          - key: logstash.yml
+            path: logstash.yml
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+
+        
+
+
+# /usr/share/logstash/pipeline/logstash.conf
+# /usr/share/logstash/config/logstash.yml

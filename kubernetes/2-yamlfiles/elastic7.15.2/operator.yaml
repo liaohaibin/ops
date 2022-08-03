@@ -372,7 +372,7 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-      - image: "192.168.110.44:5000/elastic/eck-operator:2.0.0"
+      - image: "10.1.21.215:5000/elastic/operator:2.0.0"
         imagePullPolicy: IfNotPresent
         name: manager
         args:
